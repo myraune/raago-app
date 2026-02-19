@@ -3,6 +3,8 @@ import { getUser, getUserPositions } from "@/lib/actions";
 import { formatNOK, formatPercent } from "@/lib/amm";
 import { Briefcase, TrendingUp, TrendingDown } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Portefolje - Raago",
 };

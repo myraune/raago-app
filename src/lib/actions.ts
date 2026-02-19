@@ -6,18 +6,30 @@ import { revalidatePath } from "next/cache";
 
 const DEMO_USER_ID = "demo-user";
 
+const DEFAULT_USER = {
+  id: DEMO_USER_ID,
+  username: "demo",
+  balance: 10000,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 async function getOrCreateDemoUser() {
-  let user = await prisma.user.findUnique({ where: { id: DEMO_USER_ID } });
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        id: DEMO_USER_ID,
-        username: "demo",
-        balance: 10000,
-      },
-    });
+  try {
+    let user = await prisma.user.findUnique({ where: { id: DEMO_USER_ID } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          id: DEMO_USER_ID,
+          username: "demo",
+          balance: 10000,
+        },
+      });
+    }
+    return user;
+  } catch {
+    return DEFAULT_USER;
   }
-  return user;
 }
 
 export async function executeTrade(
@@ -106,66 +118,78 @@ export async function getUser() {
 }
 
 export async function getMarkets(category?: string) {
-  const where = category ? { category } : {};
-  return prisma.market.findMany({
-    where,
-    orderBy: { volume: "desc" },
-  });
+  try {
+    const where = category ? { category } : {};
+    return await prisma.market.findMany({
+      where,
+      orderBy: { volume: "desc" },
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function getMarket(id: string) {
-  return prisma.market.findUnique({
-    where: { id },
-    include: {
-      trades: {
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        include: { user: true },
+  try {
+    return await prisma.market.findUnique({
+      where: { id },
+      include: {
+        trades: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { user: true },
+        },
       },
-    },
-  });
+    });
+  } catch {
+    return null;
+  }
 }
 
 export async function getUserPositions() {
-  const user = await getOrCreateDemoUser();
-  const trades = await prisma.trade.findMany({
-    where: { userId: user.id },
-    include: { market: true },
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const user = await getOrCreateDemoUser();
+    const trades = await prisma.trade.findMany({
+      where: { userId: user.id },
+      include: { market: true },
+      orderBy: { createdAt: "desc" },
+    });
 
-  // Aggregate positions per market per side
-  const positionMap = new Map<
-    string,
-    {
-      market: typeof trades[0]["market"];
-      yesShares: number;
-      noShares: number;
-      totalCost: number;
-    }
-  >();
+    // Aggregate positions per market per side
+    const positionMap = new Map<
+      string,
+      {
+        market: typeof trades[0]["market"];
+        yesShares: number;
+        noShares: number;
+        totalCost: number;
+      }
+    >();
 
-  for (const trade of trades) {
-    const key = trade.marketId;
-    if (!positionMap.has(key)) {
-      positionMap.set(key, {
-        market: trade.market,
-        yesShares: 0,
-        noShares: 0,
-        totalCost: 0,
-      });
+    for (const trade of trades) {
+      const key = trade.marketId;
+      if (!positionMap.has(key)) {
+        positionMap.set(key, {
+          market: trade.market,
+          yesShares: 0,
+          noShares: 0,
+          totalCost: 0,
+        });
+      }
+      const pos = positionMap.get(key)!;
+      const multiplier = trade.direction === "buy" ? 1 : -1;
+      if (trade.side === "yes") {
+        pos.yesShares += trade.shares * multiplier;
+      } else {
+        pos.noShares += trade.shares * multiplier;
+      }
+      pos.totalCost += trade.cost * (trade.direction === "buy" ? 1 : -1);
     }
-    const pos = positionMap.get(key)!;
-    const multiplier = trade.direction === "buy" ? 1 : -1;
-    if (trade.side === "yes") {
-      pos.yesShares += trade.shares * multiplier;
-    } else {
-      pos.noShares += trade.shares * multiplier;
-    }
-    pos.totalCost += trade.cost * (trade.direction === "buy" ? 1 : -1);
+
+    return Array.from(positionMap.values()).filter(
+      (p) => p.yesShares > 0 || p.noShares > 0
+    );
+  } catch {
+    return [];
   }
-
-  return Array.from(positionMap.values()).filter(
-    (p) => p.yesShares > 0 || p.noShares > 0
-  );
 }

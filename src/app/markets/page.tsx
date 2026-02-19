@@ -3,6 +3,8 @@ import { getMarkets } from "@/lib/actions";
 import MarketCard from "@/components/MarketCard";
 import CategoryFilter from "@/components/CategoryFilter";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Markeder - Raago",
 };

@@ -5,6 +5,8 @@ import { formatPercent, formatNOK } from "@/lib/amm";
 import TradePanel from "@/components/TradePanel";
 import { ArrowLeft, Clock, BarChart3, Users } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const categoryLabels: Record<string, string> = {
   politics: "Politikk",
   energy: "Energi",

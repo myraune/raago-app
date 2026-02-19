@@ -3,6 +3,8 @@ import { getMarkets } from "@/lib/actions";
 import MarketCard from "@/components/MarketCard";
 import { TrendingUp, Zap, Shield, BarChart3 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const markets = await getMarkets();
   const featuredMarkets = markets.slice(0, 6);
