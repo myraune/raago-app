@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  balance   Float    @default(10000) // Start with 10,000 NOK play money
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trades    Trade[]
+}
+
+model Market {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String   // politics, energy, sports, weather, culture, economy
+  imageUrl    String?
+  status      String   @default("open") // open, closed, resolved
+  resolution  String?  // yes, no, null (unresolved)
+  yesPrice    Float    @default(0.5) // Current price of YES share (0-1)
+  volume      Float    @default(0)   // Total NOK traded
+  liquidity   Float    @default(1000) // AMM liquidity parameter
+  closeDate   DateTime
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  trades      Trade[]
+}
+
+model Trade {
+  id        String   @id @default(cuid())
+  userId    String
+  marketId  String
+  side      String   // yes, no
+  direction String   // buy, sell
+  shares    Float
+  price     Float    // Price per share at time of trade
+  cost      Float    // Total cost of trade
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  market    Market   @relation(fields: [marketId], references: [id])
+}
